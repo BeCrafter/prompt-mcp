@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { logger } from './logger.js';
+import { config } from './config.js';
 
 /**
  * 参数验证工具类
@@ -66,10 +67,15 @@ export class PromptProcessor {
   /**
    * 处理prompt内容，替换参数占位符
    */
-  static processPrompt(prompt, args) {
+  static async processPrompt(prompt, args) {
     try {
       // 验证参数
       const validatedArgs = ArgumentValidator.validateArguments(prompt, args);
+      
+      // 如果配置了远程URL，则使用远程处理
+      if (config.remoteUrl) {
+        return await this.processRemotePrompt(prompt, validatedArgs);
+      }
       
       let promptText = '';
       
@@ -95,6 +101,39 @@ export class PromptProcessor {
       return promptText.trim();
     } catch (error) {
       logger.error(`处理prompt ${prompt.name} 时发生错误:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 远程处理prompt
+   */
+  static async processRemotePrompt(prompt, args) {
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(config.remoteHeaders || {})
+      };
+
+      const requestBody = {
+        promptName: prompt.name,
+        arguments: args
+      };
+
+      const response = await fetch(`${config.remoteUrl}/process`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`远程服务器返回错误: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.processedText;
+    } catch (error) {
+      logger.error(`远程处理prompt ${prompt.name} 时发生错误:`, error);
       throw error;
     }
   }

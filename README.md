@@ -11,6 +11,8 @@
 - 🔄 **热重载**: 支持运行时重新加载 prompts
 - 📊 **状态监控**: 提供详细的加载状态和错误信息
 - 🎯 **多类型参数**: 支持 string、number、boolean 等参数类型
+- 🌐 **远程服务**: 支持从远程服务器加载和处理 prompts
+- 🔑 **自定义请求头**: 支持配置远程服务器的请求头信息
 
 ## 安装
 
@@ -48,6 +50,13 @@ npm run version
 node src/index.js --prompts-dir /path/to/prompts
 node src/index.js -p ./my-prompts
 
+# 使用远程服务器
+node src/index.js --remote-url https://api.example.com/prompts
+node src/index.js -r https://api.example.com/prompts
+
+# 设置远程服务器请求头
+node src/index.js -r https://api.example.com/prompts -H '{"Authorization":"Bearer token"}'
+
 # 查看帮助信息
 node src/index.js --help
 node src/index.js -h
@@ -68,8 +77,10 @@ cp env.example .env
 可配置的环境变量：
 
 - `PROMPTS_DIR`: prompts文件所在目录（优先级低于命令行参数）
-- `MCP_SERVER_NAME`: 服务器名称（默认: prompt-mcp-server）
-- `MCP_SERVER_VERSION`: 服务器版本（默认: 1.0.0）
+- `REMOTE_URL`: 远程服务器地址（优先级低于命令行参数）
+- `REMOTE_HEADERS`: 远程服务器请求头（JSON格式，优先级低于命令行参数）
+- `MCP_SERVER_NAME`: 服务器名称（默认: prompt-mcp）
+- `MCP_SERVER_VERSION': 服务器版本（默认: 0.0.8）
 - `LOG_LEVEL`: 日志级别（error/warn/info/debug，默认: info）
 - `MAX_PROMPTS`: 最大prompt数量限制（默认: 100）
 
@@ -161,6 +172,40 @@ src/
     └── error-fixer.yaml
 ```
 
+## 版本发布
+
+要发布新版本，只需创建一个新的版本标签并推送到 GitHub：
+
+```bash
+# 创建新的版本标签（例如：v0.1.0）
+git tag v0.1.0
+
+# 推送标签到远程仓库
+git push origin v0.1.0
+```
+
+在使用自动发布功能之前，您需要配置以下内容：
+
+1. 启用 GitHub Actions 权限：
+   - 访问仓库的 Settings -> Actions -> General
+   - 在 "Workflow permissions" 部分
+   - 选择 "Read and write permissions"
+   - 点击 "Save" 保存设置
+
+2. 配置 NPM 令牌：
+   - 访问 npmjs.com -> Access Tokens
+   - 创建新的令牌（类型选择 Publish）
+   - 将令牌添加到仓库的 Secrets（名称：`NPM_TOKEN`）
+   - 访问 npmjs.com -> Access Tokens
+   - 创建新的令牌（类型选择 Publish）
+   - 将令牌添加到仓库的 Secrets
+
+配置完成后，GitHub Actions 将自动：
+1. 更新 package.json 中的版本号
+2. 更新 env.example 中的版本号
+3. 更新 README.md 中的版本信息
+4. 发布新版本到 npm 仓库
+
 ## 开发
 
 ### 代码结构说明
@@ -194,8 +239,15 @@ npm start
 # 指定自定义prompts目录
 node src/index.js --prompts-dir /path/to/my/prompts
 
+# 使用远程服务器
+node src/index.js -r https://api.example.com/prompts
+
+# 使用远程服务器和自定义请求头
+node src/index.js -r https://api.example.com/prompts -H '{"Authorization":"Bearer token"}'
+
 # 使用环境变量
 PROMPTS_DIR=/custom/prompts npm start
+REMOTE_URL=https://api.example.com/prompts REMOTE_HEADERS='{"key":"value"}' npm start
 
 # 调试模式
 LOG_LEVEL=debug node src/index.js -p ./debug-prompts

@@ -3,6 +3,7 @@ import path from 'path';
 import YAML from 'yaml';
 import { z } from 'zod';
 import { logger } from './logger.js';
+import { config } from './config.js';
 
 /**
  * Prompt数据结构验证schema
@@ -35,9 +36,68 @@ export class PromptManager {
   }
 
   /**
+   * 从远程服务器加载prompts
+   */
+  async loadRemotePrompts() {
+    try {
+      logger.info(`开始从远程服务器 ${config.remoteUrl} 加载prompts`);
+
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(config.remoteHeaders || {})
+      };
+
+      const response = await fetch(config.remoteUrl, { headers });
+      
+      if (!response.ok) {
+        throw new Error(`远程服务器返回错误: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // 清空之前的加载结果
+      this.loadedPrompts.clear();
+      this.loadErrors.clear();
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      // 处理远程数据
+      for (const promptData of data) {
+        try {
+          const validatedPrompt = PromptSchema.parse(promptData);
+          this.loadedPrompts.set(validatedPrompt.name, validatedPrompt);
+          successCount++;
+        } catch (error) {
+          errorCount++;
+          this.loadErrors.set(promptData.name || 'unknown', error.message);
+          logger.error(`验证远程prompt失败:`, error.message);
+        }
+      }
+
+      logger.info(`远程Prompt加载完成: 成功 ${successCount} 个, 失败 ${errorCount} 个`);
+      
+      return {
+        success: successCount,
+        errorCount: errorCount,
+        prompts: Array.from(this.loadedPrompts.values()),
+        loadErrors: Object.fromEntries(this.loadErrors)
+      };
+    } catch (error) {
+      logger.error('加载远程prompts时发生错误:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 加载所有prompts
    */
   async loadPrompts() {
+    // 如果配置了远程URL，则从远程加载
+    if (config.remoteUrl) {
+      return await this.loadRemotePrompts();
+    }
+
     try {
       logger.info(`开始从 ${this.promptsDir} 加载prompts`);
       
@@ -78,7 +138,7 @@ export class PromptManager {
         }
       });
 
-      logger.info(`Prompt加载完成: 成功 ${successCount} 个, 失败 ${errorCount} 个`);
+      logger.info(`本地Prompt加载完成: 成功 ${successCount} 个, 失败 ${errorCount} 个`);
       
       return {
         success: successCount,

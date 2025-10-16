@@ -5,11 +5,18 @@ on:
     tags:
       - 'v*' # 触发条件：推送以 v 开头的标签
 
+permissions:
+  contents: write
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -24,8 +31,28 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
       
-      - name: Update package version
-        run: npm version ${{ steps.get_version.outputs.VERSION }} --no-git-tag-version
+      - name: Update version in files
+        run: |
+          # 更新 package.json 版本
+          npm version ${{ steps.get_version.outputs.VERSION }} --no-git-tag-version
+          
+          # 更新 env.example 中的版本
+          sed -i "s/MCP_SERVER_VERSION=.*/MCP_SERVER_VERSION=${{ steps.get_version.outputs.VERSION }}/" env.example
+          
+          # 更新 README.md 中的版本信息
+          sed -i "s/MCP_SERVER_VERSION.*默认: .*/MCP_SERVER_VERSION': 服务器版本（默认: ${{ steps.get_version.outputs.VERSION }}）/" README.md
+      
+      - name: Commit version updates
+        run: |
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git add package.json env.example README.md
+          git commit -m "chore: update version to ${{ steps.get_version.outputs.VERSION }}" || echo "No changes to commit"
+          git push origin HEAD:main
+      
+      - name: Cleanup temporary files
+        run: |
+          rm -f *.bak *.tmp
       
       - name: Publish to NPM
         run: npm publish --access public
