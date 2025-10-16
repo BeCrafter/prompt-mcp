@@ -80,7 +80,7 @@ cp env.example .env
 - `REMOTE_URL`: 远程服务器地址（优先级低于命令行参数）
 - `REMOTE_HEADERS`: 远程服务器请求头（JSON格式，优先级低于命令行参数）
 - `MCP_SERVER_NAME`: 服务器名称（默认: prompt-mcp）
-- `MCP_SERVER_VERSION': 服务器版本（默认: 0.1.0）
+- `MCP_SERVER_VERSION': 服务器版本（默认: 0.1.1）
 - `LOG_LEVEL`: 日志级别（error/warn/info/debug，默认: info）
 - `MAX_PROMPTS`: 最大prompt数量限制（默认: 100）
 
