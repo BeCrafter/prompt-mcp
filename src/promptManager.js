@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import YAML from 'yaml';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { logger } from './logger.js';
 import { config } from './config.js';
 
@@ -22,7 +23,12 @@ const PromptSchema = z.object({
     description: z.string().optional(),
     type: z.enum(['string', 'number', 'boolean']).optional().default('string'),
     required: z.boolean().optional().default(true)
-  })).optional().default([])
+  })).optional().default([]),
+  // 元数据字段（可选，用于远程服务）
+  uniqueId: z.string().optional(),
+  filePath: z.string().optional(),
+  fileName: z.string().optional(),
+  relativePath: z.string().optional()
 });
 
 /**
@@ -33,6 +39,60 @@ export class PromptManager {
     this.promptsDir = promptsDir;
     this.loadedPrompts = new Map();
     this.loadErrors = new Map();
+    this.idToPathMap = new Map(); // ID到文件路径的映射
+  }
+
+  /**
+   * 基于文件路径生成固定长度的唯一ID
+   * @param {string} relativePath - 相对于prompts目录的路径
+   * @returns {string} 固定长度的唯一ID字符串（8位）
+   */
+  generateUniqueId(relativePath) {
+    // 使用SHA-256哈希算法生成固定长度的ID
+    const hash = crypto.createHash('sha256');
+    hash.update(relativePath);
+    const hashHex = hash.digest('hex');
+    
+    // 取前8位作为ID，保证长度一致
+    // 8位十六进制可以表示 16^8 = 4,294,967,296 种不同的值，足够保证唯一性
+    const shortId = hashHex.substring(0, 8);
+    
+    return shortId;
+  }
+
+  /**
+   * 基于文件路径生成固定长度的唯一ID（可配置长度版本）
+   * @param {string} relativePath - 相对于prompts目录的路径
+   * @param {number} length - ID长度，默认为8
+   * @returns {string} 固定长度的唯一ID字符串
+   */
+  generateUniqueIdWithLength(relativePath, length = 8) {
+    const hash = crypto.createHash('sha256');
+    hash.update(relativePath);
+    const hashHex = hash.digest('hex');
+    
+    // 取指定长度的字符作为ID
+    const shortId = hashHex.substring(0, length);
+    
+    return shortId;
+  }
+
+  /**
+   * 基于ID反解文件路径
+   * @param {string} id - 唯一ID
+   * @returns {string|null} 文件路径，如果找不到则返回null
+   */
+  getIdToPath(id) {
+    return this.idToPathMap.get(id) || null;
+  }
+
+  /**
+   * 注册ID到路径的映射
+   * @param {string} id - 唯一ID
+   * @param {string} relativePath - 相对路径
+   */
+  registerIdPathMapping(id, relativePath) {
+    this.idToPathMap.set(id, relativePath);
   }
 
   /**
@@ -66,7 +126,40 @@ export class PromptManager {
       for (const promptData of data) {
         try {
           const validatedPrompt = PromptSchema.parse(promptData);
-          this.loadedPrompts.set(validatedPrompt.name, validatedPrompt);
+          
+          // 检查远程服务是否提供了uniqueId
+          if (promptData.uniqueId) {
+            // 远程服务提供了uniqueId，直接使用
+            validatedPrompt.uniqueId = promptData.uniqueId;
+            
+            // 可选：如果提供了其他元数据字段就使用，没提供就设置默认值
+            validatedPrompt.filePath = promptData.filePath || `remote://${validatedPrompt.name}`;
+            validatedPrompt.fileName = promptData.fileName || `${validatedPrompt.name}.yaml`;
+            validatedPrompt.relativePath = promptData.relativePath || `${validatedPrompt.name}.yaml`;
+            
+            // 注册ID到路径的映射
+            this.registerIdPathMapping(promptData.uniqueId, validatedPrompt.relativePath);
+            
+            // 使用唯一ID作为存储键
+            this.loadedPrompts.set(promptData.uniqueId, validatedPrompt);
+            logger.debug(`使用远程服务提供的uniqueId: ${validatedPrompt.name} -> ID: ${promptData.uniqueId}`);
+          } else {
+            // 远程服务未提供uniqueId，使用兼容模式
+            const virtualPath = `${validatedPrompt.name}.yaml`;
+            const uniqueId = this.generateUniqueId(virtualPath);
+            validatedPrompt.uniqueId = uniqueId;
+            validatedPrompt.filePath = `remote://${validatedPrompt.name}`;
+            validatedPrompt.fileName = `${validatedPrompt.name}.yaml`;
+            validatedPrompt.relativePath = virtualPath;
+            
+            // 注册ID到路径的映射
+            this.registerIdPathMapping(uniqueId, virtualPath);
+            
+            // 使用唯一ID作为存储键
+            this.loadedPrompts.set(uniqueId, validatedPrompt);
+            logger.debug(`使用兼容模式加载远程prompt: ${validatedPrompt.name} -> ID: ${uniqueId}`);
+          }
+          
           successCount++;
         } catch (error) {
           errorCount++;
@@ -90,6 +183,42 @@ export class PromptManager {
   }
 
   /**
+   * 递归扫描目录，获取所有prompt文件
+   */
+  async scanPromptFiles(dirPath, relativePath = '') {
+    const promptFiles = [];
+    
+    try {
+      const items = await fs.readdir(dirPath, { withFileTypes: true });
+      
+      for (const item of items) {
+        const itemPath = path.join(dirPath, item.name);
+        const itemRelativePath = relativePath ? path.join(relativePath, item.name) : item.name;
+        
+        if (item.isDirectory()) {
+          // 递归扫描子目录
+          const subFiles = await this.scanPromptFiles(itemPath, itemRelativePath);
+          promptFiles.push(...subFiles);
+        } else if (item.isFile()) {
+          // 检查文件扩展名
+          const ext = path.extname(item.name).toLowerCase();
+          if (['.yaml', '.yml', '.json'].includes(ext)) {
+            promptFiles.push({
+              fileName: item.name,
+              filePath: itemPath,
+              relativePath: itemRelativePath
+            });
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn(`扫描目录 ${dirPath} 时发生错误:`, error.message);
+    }
+    
+    return promptFiles;
+  }
+
+  /**
    * 加载所有prompts
    */
   async loadPrompts() {
@@ -104,15 +233,25 @@ export class PromptManager {
       // 确保目录存在
       await fs.ensureDir(this.promptsDir);
       
-      // 读取目录中的所有文件
-      const files = await fs.readdir(this.promptsDir);
+      // 根据配置决定是否递归扫描
+      let promptFiles;
+      if (config.recursiveScan) {
+        promptFiles = await this.scanPromptFiles(this.promptsDir);
+      } else {
+        // 只扫描根目录
+        const files = await fs.readdir(this.promptsDir);
+        promptFiles = files
+          .filter(file => {
+            const ext = path.extname(file).toLowerCase();
+            return ['.yaml', '.yml', '.json'].includes(ext);
+          })
+          .map(file => ({
+            fileName: file,
+            filePath: path.join(this.promptsDir, file),
+            relativePath: file
+          }));
+      }
       
-      // 过滤出支持的文件类型
-      const promptFiles = files.filter(file => {
-        const ext = path.extname(file).toLowerCase();
-        return ['.yaml', '.yml', '.json'].includes(ext);
-      });
-
       logger.debug(`找到 ${promptFiles.length} 个prompt文件`);
 
       // 清空之前的加载结果
@@ -120,7 +259,7 @@ export class PromptManager {
       this.loadErrors.clear();
 
       // 并行加载所有文件
-      const loadPromises = promptFiles.map(file => this.loadPromptFile(file));
+      const loadPromises = promptFiles.map(fileInfo => this.loadPromptFile(fileInfo));
       const results = await Promise.allSettled(loadPromises);
 
       // 统计加载结果
@@ -132,9 +271,10 @@ export class PromptManager {
           successCount++;
         } else {
           errorCount++;
-          const fileName = promptFiles[index];
-          this.loadErrors.set(fileName, result.reason.message);
-          logger.error(`加载prompt文件 ${fileName} 失败:`, result.reason.message);
+          const fileInfo = promptFiles[index];
+          const errorKey = fileInfo.relativePath || fileInfo.fileName;
+          this.loadErrors.set(errorKey, result.reason.message);
+          logger.error(`加载prompt文件 ${errorKey} 失败:`, result.reason.message);
         }
       });
 
@@ -155,8 +295,11 @@ export class PromptManager {
   /**
    * 加载单个prompt文件
    */
-  async loadPromptFile(fileName) {
-    const filePath = path.join(this.promptsDir, fileName);
+  async loadPromptFile(fileInfo) {
+    // 支持旧的字符串参数格式（向后兼容）
+    const fileName = typeof fileInfo === 'string' ? fileInfo : fileInfo.fileName;
+    const filePath = typeof fileInfo === 'string' ? path.join(this.promptsDir, fileInfo) : fileInfo.filePath;
+    const relativePath = typeof fileInfo === 'string' ? fileInfo : fileInfo.relativePath;
     
     try {
       const content = await fs.readFile(filePath, 'utf8');
@@ -175,9 +318,18 @@ export class PromptManager {
       // 添加文件路径信息
       validatedPrompt.filePath = filePath;
       validatedPrompt.fileName = fileName;
+      validatedPrompt.relativePath = relativePath;
       
-      this.loadedPrompts.set(validatedPrompt.name, validatedPrompt);
-      logger.debug(`成功加载prompt: ${validatedPrompt.name}`);
+      // 生成基于文件路径的唯一ID
+      const uniqueId = this.generateUniqueId(relativePath);
+      validatedPrompt.uniqueId = uniqueId;
+      
+      // 注册ID到路径的映射
+      this.registerIdPathMapping(uniqueId, relativePath);
+      
+      // 使用唯一ID作为存储键
+      this.loadedPrompts.set(uniqueId, validatedPrompt);
+      logger.debug(`成功加载prompt: ${validatedPrompt.name} -> ID: ${uniqueId} (${relativePath})`);
       
       return validatedPrompt;
     } catch (error) {
@@ -197,17 +349,54 @@ export class PromptManager {
   }
 
   /**
-   * 根据名称获取prompt
+   * 根据ID获取prompt
+   * @param {string} id - 唯一ID或原始名称（向后兼容）
    */
-  getPrompt(name) {
-    return this.loadedPrompts.get(name);
+  getPrompt(id) {
+    // 首先尝试直接匹配唯一ID
+    if (this.loadedPrompts.has(id)) {
+      return this.loadedPrompts.get(id);
+    }
+    
+    // 如果直接匹配失败，尝试匹配原始名称（向后兼容）
+    for (const [key, prompt] of this.loadedPrompts.entries()) {
+      if (prompt.name === id || prompt.relativePath === id) {
+        return prompt;
+      }
+    }
+    
+    return null;
   }
 
   /**
-   * 获取prompt名称列表
+   * 根据名称获取prompt（向后兼容方法）
+   * @deprecated 建议使用 getPrompt(id) 方法
+   */
+  getPromptByName(name) {
+    return this.getPrompt(name);
+  }
+
+  /**
+   * 获取prompt ID列表
    */
   getPromptNames() {
     return Array.from(this.loadedPrompts.keys());
+  }
+
+  /**
+   * 验证prompt数据结构
+   * @param {Object} promptData - 要验证的prompt数据
+   * @returns {Object} 验证后的prompt数据
+   */
+  validatePromptData(promptData) {
+    return PromptSchema.parse(promptData);
+  }
+
+  /**
+   * 获取所有prompt的ID和路径映射
+   */
+  getIdPathMappings() {
+    return Object.fromEntries(this.idToPathMap);
   }
 
   /**

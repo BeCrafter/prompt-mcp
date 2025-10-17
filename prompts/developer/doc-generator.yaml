@@ -1,4 +1,4 @@
-name: "文档生成器"
+name: doc-generator
 description: "根据代码生成技术文档"
 messages:
   - role: "user"

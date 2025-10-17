@@ -241,6 +241,46 @@ manager.loadPrompts().then(result => console.log(result));
 "
 ```
 
+### 4. 使用MCP Inspector进行可视化调试
+
+MCP Inspector是最推荐的调试方式，提供直观的图形界面：
+
+#### 本地代码调试
+
+**使用本地源代码进行调试**:
+```bash
+# 在项目根目录启动Inspector，直接使用本地代码
+npx @modelcontextprotocol/inspector node src/index.js
+
+# 或者使用npm脚本
+npx @modelcontextprotocol/inspector npm start
+
+# 开发模式（自动重启）
+npx @modelcontextprotocol/inspector npm run dev
+```
+
+**本地调试的优势**:
+- 🔧 **实时修改**: 修改代码后Inspector会自动重新连接
+- 🐛 **断点调试**: 可以在IDE中设置断点进行调试
+- 📝 **日志查看**: 实时查看本地代码的日志输出
+- ⚡ **快速迭代**: 无需发布包即可测试功能
+
+#### 已发布包调试
+
+**使用已发布的包进行调试**:
+```bash
+# 使用已发布的npm包
+npx @modelcontextprotocol/inspector npx @becrafter/prompt-mcp
+```
+
+**Inspector调试优势**:
+- 🎯 **直观界面**: 无需命令行操作，图形化界面更友好
+- 🔍 **实时测试**: 可以实时测试所有MCP工具
+- 📊 **结果可视化**: JSON结果格式化显示，易于阅读
+- 🐛 **错误调试**: 详细的错误信息帮助快速定位问题
+- 📝 **历史记录**: 保存测试历史，便于重复测试
+- ⚡ **性能监控**: 显示工具执行时间，优化性能
+
 ### 4. 测试MCP接口
 
 使用MCP客户端工具测试服务器接口：
@@ -252,6 +292,161 @@ npm install -g @modelcontextprotocol/cli
 # 测试服务器
 mcp-client --stdio npx @becrafter/prompt-mcp
 ```
+
+### 5. 使用MCP Inspector进行可视化调试
+
+MCP Inspector是一个强大的可视化调试工具，可以直观地测试和调试MCP服务器：
+
+#### 安装MCP Inspector
+
+```bash
+# 全局安装MCP Inspector
+npm install -g @modelcontextprotocol/inspector
+```
+
+#### 启动Inspector
+
+**本地代码调试**:
+```bash
+# 使用本地源代码启动Inspector
+npx @modelcontextprotocol/inspector node src/index.js
+
+# 或使用npm脚本
+npx @modelcontextprotocol/inspector npm start
+```
+
+**已发布包调试**:
+```bash
+# 使用已发布的npm包启动Inspector
+npx @modelcontextprotocol/inspector npx @becrafter/prompt-mcp
+```
+
+#### Inspector功能特性
+
+1. **可视化界面**: 提供Web界面进行交互式调试
+2. **工具列表**: 自动发现并显示所有可用的MCP工具
+3. **参数输入**: 图形化界面输入工具参数
+4. **结果展示**: 实时显示工具执行结果
+5. **错误调试**: 详细的错误信息和调试信息
+
+#### 使用步骤
+
+**本地代码调试步骤**:
+
+1. **启动Inspector（本地代码）**:
+   ```bash
+   # 在项目根目录执行
+   npx @modelcontextprotocol/inspector node src/index.js
+   ```
+
+2. **打开浏览器**: Inspector会自动打开浏览器界面（通常是 `http://localhost:3000`）
+
+3. **查看工具列表**: 在左侧面板可以看到所有可用的MCP工具：
+   - `get_prompt_list`: 获取所有prompt列表
+   - `get_prompt`: 根据ID获取特定prompt
+   - `reload_prompts`: 重新加载prompts
+
+4. **测试工具**:
+   - 点击工具名称
+   - 在参数输入框中填写参数（如需要）
+   - 点击"Execute"按钮执行
+   - 查看右侧的结果面板
+
+5. **实时调试**:
+   - 修改本地代码（如`src/index.js`或`src/promptManager.js`）
+   - 保存文件后Inspector会自动重新连接
+   - 重新测试工具验证修改效果
+
+#### Inspector调试示例
+
+**测试get_prompt_list工具**:
+1. 选择`get_prompt_list`工具
+2. 无需输入参数
+3. 点击"Execute"
+4. 查看返回的prompt列表和ID映射
+
+**测试get_prompt工具**:
+1. 选择`get_prompt`工具
+2. 在`prompt_id`参数中输入固定长度ID（如`a1b2c3d4`）
+3. 点击"Execute"
+4. 查看返回的完整prompt信息
+
+**测试reload_prompts工具**:
+1. 选择`reload_prompts`工具
+2. 无需输入参数
+3. 点击"Execute"
+4. 查看重新加载的结果
+
+#### Inspector高级功能
+
+1. **历史记录**: 查看之前的工具调用历史
+2. **参数模板**: 保存常用的参数配置
+3. **批量测试**: 支持批量执行多个工具调用
+4. **性能监控**: 显示工具执行时间和性能指标
+5. **日志查看**: 实时查看服务器日志输出
+
+#### 调试技巧
+
+**本地代码调试技巧**:
+
+1. **实时调试**: 
+   - 修改prompt文件后，使用`reload_prompts`工具重新加载
+   - 修改源代码后，Inspector会自动重新连接
+   - 在IDE中设置断点，结合Inspector进行调试
+
+2. **ID验证**: 
+   - 使用`get_prompt_list`查看所有可用的固定长度ID
+   - 验证新生成的ID是否符合预期格式
+
+3. **错误排查**: 
+   - 通过Inspector的错误信息快速定位问题
+   - 查看本地代码的日志输出
+   - 使用IDE的调试功能单步执行
+
+4. **性能测试**: 
+   - 监控工具执行时间，优化性能瓶颈
+   - 使用`LOG_LEVEL=debug`查看详细日志
+
+5. **代码热重载**:
+   - 使用`npm run dev`启动开发模式
+   - 修改代码后自动重启服务器
+   - Inspector会自动重新连接到新的服务器实例
+
+#### 常见问题排查
+
+**问题1: Inspector无法连接本地服务器**
+```bash
+# 检查本地服务器是否正常启动
+npm start
+
+# 检查端口是否被占用
+lsof -i :3000
+
+# 检查本地代码是否有语法错误
+node --check src/index.js
+```
+
+**问题2: 本地代码修改后Inspector未重新连接**
+- 确保使用`npm run dev`启动开发模式
+- 检查文件保存是否正确
+- 手动重启Inspector: `npx @modelcontextprotocol/inspector node src/index.js`
+
+**问题3: 工具执行失败**
+- 检查参数格式是否正确
+- 查看错误信息面板
+- 检查本地代码的日志输出
+- 在IDE中设置断点进行调试
+
+**问题4: 固定长度ID查找失败**
+- 使用`get_prompt_list`确认ID是否存在
+- 检查ID格式是否正确（8位十六进制）
+- 尝试使用原始名称进行查找
+- 检查`promptManager.js`中的ID生成逻辑
+
+**问题5: 本地prompt文件加载失败**
+- 检查prompt文件格式是否正确
+- 使用`LOG_LEVEL=debug`查看详细加载日志
+- 验证文件路径和权限
 
 ## 📊 监控和日志
 
@@ -305,3 +500,21 @@ CMD ["npm", "start"]
 - 配置日志收集
 - 设置性能监控
 - 配置错误告警
+
+### 4. 生产环境调试
+
+在生产环境中，可以使用MCP Inspector进行远程调试：
+
+```bash
+# 在生产服务器上启动Inspector
+npx @modelcontextprotocol/inspector npx @becrafter/prompt-mcp
+
+# 通过SSH隧道访问Inspector界面
+ssh -L 3000:localhost:3000 user@production-server
+```
+
+**生产环境调试注意事项**:
+- 🔒 **安全考虑**: 确保Inspector只在内部网络访问
+- 📊 **性能影响**: Inspector会增加少量性能开销
+- 🕐 **访问控制**: 限制Inspector的访问权限
+- 📝 **日志记录**: 记录所有调试操作

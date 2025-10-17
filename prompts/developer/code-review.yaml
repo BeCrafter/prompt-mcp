@@ -1,4 +1,4 @@
-name: "代码审查助手"
+name: code-review
 description: "帮助进行代码审查的AI助手"
 messages:
   - role: "user"

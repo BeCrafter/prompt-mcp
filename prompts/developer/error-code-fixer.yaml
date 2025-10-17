@@ -1,4 +1,4 @@
-name: "错误修复助手"
+name: error-code-fixer
 description: "帮助分析和修复代码错误"
 messages:
   - role: "user"

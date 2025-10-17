@@ -65,6 +65,7 @@ MCP Prompt Server - 智能 Prompt 管理服务器
   MCP_SERVER_VERSION         服务器版本 (默认: 0.0.0)
   LOG_LEVEL                  日志级别 (默认: info)
   MAX_PROMPTS                最大prompt数量限制 (默认: 100)
+  RECURSIVE_SCAN             是否启用递归扫描子目录 (默认: true)
   REMOTE_URL                 远程服务器地址
   REMOTE_HEADERS            远程服务器请求头 (JSON格式)
 
@@ -105,6 +106,7 @@ export class Config {
     this.serverVersion = process.env.MCP_SERVER_VERSION || '0.0.0';
     this.logLevel = process.env.LOG_LEVEL || 'info';
     this.maxPrompts = parseInt(process.env.MAX_PROMPTS) || 100;
+    this.recursiveScan = process.env.RECURSIVE_SCAN !== 'false'; // 默认启用递归扫描
     
     if (cliArgs.version) {
       console.log(this.serverVersion);
@@ -174,6 +176,7 @@ export class Config {
     console.log(`  服务器版本: ${this.serverVersion}`);
     console.log(`  日志级别: ${this.logLevel}`);
     console.log(`  最大Prompts: ${this.maxPrompts}`);
+    console.log(`  递归扫描: ${this.recursiveScan ? '启用' : '禁用'}`);
   }
 }
 

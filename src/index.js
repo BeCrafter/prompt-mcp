@@ -19,66 +19,51 @@ let promptManager;
 let server;
 
 /**
+ * 定义三个固定的MCP工具
+ */
+const MCP_TOOLS = [
+  {
+    name: "get_prompt_list",
+    description: "获取所有可用的prompt列表，包括标题和描述。用于在获取特定prompt之前发现可用的prompts。",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: "get_prompt", 
+    description: "根据ID获取特定prompt的完整内容，包括所有消息、参数和元数据。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt_id: {
+          type: "string",
+          description: "要获取的prompt的唯一名称"
+        }
+      },
+      required: ["prompt_id"]
+    }
+  },
+  {
+    name: "reload_prompts",
+    description: "重新加载所有预设的prompts",
+    inputSchema: {
+      type: "object", 
+      properties: {},
+      required: []
+    }
+  }
+];
+
+/**
  * 注册工具处理器
  */
 function registerToolHandlers() {
   // 注册工具列表处理器
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    const prompts = promptManager.getPrompts();
-    const tools = prompts.map(prompt => {
-      const tool = {
-        name: prompt.name,
-        description: prompt.description || `Prompt: ${prompt.name}`
-      };
-      
-      // 添加参数schema
-      if (prompt.arguments && prompt.arguments.length > 0) {
-        const properties = {};
-        const required = [];
-        
-        prompt.arguments.forEach(arg => {
-          let schema;
-          switch (arg.type) {
-            case 'number':
-              schema = { type: 'number' };
-              break;
-            case 'boolean':
-              schema = { type: 'boolean' };
-              break;
-            case 'string':
-            default:
-              schema = { type: 'string' };
-              break;
-          }
-          
-          properties[arg.name] = {
-            ...schema,
-            description: arg.description || `参数: ${arg.name}`
-          };
-          
-          if (arg.required) {
-            required.push(arg.name);
-          }
-        });
-        
-        tool.inputSchema = {
-          type: 'object',
-          properties,
-          required
-        };
-      } else {
-        tool.inputSchema = {
-          type: 'object',
-          properties: {},
-          required: []
-        };
-      }
-      
-      return tool;
-    });
-    
     return {
-      tools
+      tools: MCP_TOOLS
     };
   });
   
@@ -87,25 +72,21 @@ function registerToolHandlers() {
     const { name, arguments: args } = request.params;
     
     try {
-      // 查找对应的prompt
-      const prompt = promptManager.getPrompt(name);
-      if (!prompt) {
-        throw new Error(`未找到名为 "${name}" 的prompt`);
+      switch (name) {
+        case "get_prompt_list":
+          return await handleGetPromptList();
+          
+        case "get_prompt":
+          return await handleGetPrompt(args);
+          
+        case "reload_prompts":
+          return await handleReloadPrompts();
+          
+        default:
+          throw new Error(`未知的工具: ${name}`);
       }
-      
-      // 处理prompt内容
-      const promptText = PromptProcessor.processPrompt(prompt, args || {});
-      
-      return {
-        content: [
-          {
-            type: "text",
-            text: promptText
-          }
-        ]
-      };
     } catch (error) {
-      logger.error(`执行prompt ${name} 时发生错误:`, error);
+      logger.error(`执行工具 ${name} 时发生错误:`, error);
       return {
         content: [
           {
@@ -117,6 +98,107 @@ function registerToolHandlers() {
       };
     }
   });
+}
+
+/**
+ * 处理get_prompt_list工具调用
+ */
+async function handleGetPromptList() {
+  const prompts = promptManager.getPrompts();
+  
+  const promptList = prompts.map(prompt => ({
+    id: prompt.uniqueId,  // 使用基于文件路径的唯一ID
+    name: prompt.name,     // 保留原始名称
+    title: prompt.name,
+    description: prompt.description || `Prompt: ${prompt.name}`,
+    arguments: prompt.arguments || [],
+    hasArguments: prompt.arguments && prompt.arguments.length > 0,
+    filePath: prompt.relativePath,  // 添加文件路径信息
+    metadata: {
+      fileName: prompt.fileName,
+      fullPath: prompt.filePath
+    }
+  }));
+  
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify({
+          success: true,
+          count: promptList.length,
+          prompts: promptList,
+          idPathMappings: promptManager.getIdPathMappings()  // 添加ID到路径的映射
+        }, null, 2)
+      }
+    ]
+  };
+}
+
+/**
+ * 处理get_prompt工具调用
+ */
+async function handleGetPrompt(args) {
+  const { prompt_id } = args;
+  
+  if (!prompt_id) {
+    throw new Error("缺少必需参数: prompt_id");
+  }
+  
+  const prompt = promptManager.getPrompt(prompt_id);
+  if (!prompt) {
+    throw new Error(`未找到ID为 "${prompt_id}" 的prompt`);
+  }
+  
+  // 返回完整的prompt信息
+  const promptInfo = {
+    id: prompt.uniqueId,        // 使用基于文件路径的唯一ID
+    name: prompt.name,          // 保留原始名称
+    title: prompt.name,
+    description: prompt.description || `Prompt: ${prompt.name}`,
+    messages: prompt.messages || [],
+    arguments: prompt.arguments || [],
+    filePath: prompt.relativePath,  // 添加文件路径信息
+    metadata: {
+      fileName: prompt.fileName,
+      fullPath: prompt.filePath,
+      uniqueId: prompt.uniqueId
+    }
+  };
+  
+  return {
+    content: [
+      {
+        type: "text", 
+        text: JSON.stringify({
+          success: true,
+          prompt: promptInfo
+        }, null, 2)
+      }
+    ]
+  };
+}
+
+/**
+ * 处理reload_prompts工具调用
+ */
+async function handleReloadPrompts() {
+  logger.info('重新加载prompts...');
+  
+  const result = await promptManager.reloadPrompts();
+  
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify({
+          success: true,
+          message: `重新加载完成: 成功 ${result.success} 个, 失败 ${result.errorCount} 个`,
+          result: result
+        }, null, 2)
+      }
+    ]
+  };
 }
 
 
