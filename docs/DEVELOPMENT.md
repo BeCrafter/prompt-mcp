@@ -1,51 +1,50 @@
 # 开发文档
 
-本文档包含 MCP Prompt Server 的开发相关信息，包括项目结构、开发环境设置、代码说明等。
+本文档包含 MCP Prompt Server 的开发相关信息，包括项目结构、开发环境设置、代码说明、调试指南等。
 
 ## 📁 项目结构
 
 ```
 prompt-mcp/
-├── src/                    # 源代码目录
-│   ├── index.js           # 主入口文件
-│   ├── config.js          # 配置管理
-│   ├── logger.js          # 日志工具
-│   ├── promptManager.js   # Prompt 管理器
-│   └── promptProcessor.js # Prompt 处理器
-├── prompts/               # Prompt 文件目录
+├── src/                       # 源代码目录
+│   ├── index.js               # 主入口文件 - MCP服务器实现
+│   ├── config.js              # 配置管理 - 命令行参数和环境变量处理
+│   ├── logger.js              # 日志工具 - 分级日志输出
+│   ├── promptManager.js       # Prompt管理器 - 加载、验证、管理prompts
+│   └── promptProcessor.js     # Prompt处理器 - 参数验证和内容处理
+├── prompts/                   # Prompt文件目录
 │   ├── code-review.yaml
 │   ├── doc-generator.yaml
 │   └── error-fixer.yaml
-├── bin/                   # CLI 可执行文件
+├── bin/                       # CLI可执行文件
 │   └── prompt-mcp
-├── .github/               # GitHub Actions 配置
+├── .github/                   # GitHub Actions配置
 │   └── workflows/
 │       └── npm-publish.yml
+├── docs/                      # 项目文档
+│   └── REMOTE_SERVICE_API.md  # 远程服务接口规范
 ├── package.json
 ├── package-lock.json
-├── env.example            # 环境变量示例
-├── README.md              # 主文档
-├── DEVELOPMENT.md         # 开发文档（本文件）
-└── RELEASE.md             # 发布文档
+├── env.example                # 环境变量示例
+├── README.md                  # 主文档
+├── DEVELOPMENT.md             # 开发文档（本文件）
+└── RELEASE.md                 # 发布文档
 ```
 
 ## 🛠️ 开发环境设置
 
 ### 1. 克隆项目
-
 ```bash
 git clone https://github.com/BeCrafter/prompt-mcp.git
 cd prompt-mcp
 ```
 
 ### 2. 安装依赖
-
 ```bash
 npm install
 ```
 
 ### 3. 开发模式运行
-
 ```bash
 # 开发模式（自动重启）
 npm run dev
@@ -55,7 +54,6 @@ npm start
 ```
 
 ### 4. 运行测试
-
 ```bash
 npm test
 ```
@@ -94,16 +92,19 @@ logger.debug('调试信息:', data);
 
 #### PromptManager (`src/promptManager.js`)
 Prompt管理器，负责：
-- 加载prompt文件
+- 加载prompt文件（本地和远程）
 - 验证prompt格式
-- 管理prompt状态
+- 生成固定长度唯一ID
+- 管理prompt状态和ID映射
 - 提供prompt查询接口
 
 **主要方法：**
 - `loadPrompts()`: 加载所有prompts
-- `getPrompt(name)`: 获取指定prompt
+- `loadRemotePrompts()`: 从远程服务器加载prompts
+- `getPrompt(id)`: 获取指定prompt（支持ID、名称、路径查找）
 - `getPrompts()`: 获取所有prompts
-- `validatePrompt(prompt)`: 验证prompt格式
+- `generateUniqueId(path)`: 生成固定长度唯一ID
+- `validatePromptData(data)`: 验证prompt数据格式
 
 #### PromptProcessor (`src/promptProcessor.js`)
 Prompt处理器，负责：
@@ -123,11 +124,27 @@ Prompt处理器，负责：
 ```javascript
 import { z } from 'zod';
 
-const ArgumentValidator = {
-  string: z.string(),
-  number: z.number(),
-  boolean: z.boolean()
-};
+const PromptSchema = z.object({
+  name: z.string().min(1, 'Prompt名称不能为空'),
+  description: z.string().optional(),
+  messages: z.array(z.object({
+    role: z.enum(['user', 'assistant', 'system']),
+    content: z.object({
+      text: z.string()
+    })
+  })).optional(),
+  arguments: z.array(z.object({
+    name: z.string().min(1, '参数名不能为空'),
+    description: z.string().optional(),
+    type: z.enum(['string', 'number', 'boolean']).optional().default('string'),
+    required: z.boolean().optional().default(true)
+  })).optional().default([]),
+  // 元数据字段（可选，用于远程服务）
+  uniqueId: z.string().optional(),
+  filePath: z.string().optional(),
+  fileName: z.string().optional(),
+  relativePath: z.string().optional()
+});
 ```
 
 ## 🐛 错误处理
@@ -181,57 +198,19 @@ const ArgumentValidator = {
 - 根据日志级别过滤输出
 - 避免不必要的字符串拼接
 
-## 🤝 贡献指南
-
-### 1. 代码规范
-
-- 使用 ES6+ 语法
-- 遵循 ESLint 配置
-- 添加适当的注释
-- 保持代码简洁
-
-### 2. 提交规范
-
-使用约定式提交格式：
-
-```bash
-feat: 添加新功能
-fix: 修复bug
-docs: 更新文档
-style: 代码格式调整
-refactor: 重构代码
-test: 添加测试
-chore: 构建过程或辅助工具的变动
-```
-
-### 3. 测试要求
-
-- 为新功能添加测试用例
-- 确保所有测试通过
-- 保持测试覆盖率
-
-### 4. 文档更新
-
-- 更新相关文档
-- 添加使用示例
-- 更新API文档
-
 ## 🔧 调试技巧
 
 ### 1. 启用调试日志
-
 ```bash
 LOG_LEVEL=debug npm run dev
 ```
 
 ### 2. 查看配置信息
-
 ```bash
 npm run help
 ```
 
 ### 3. 验证prompt文件
-
 ```bash
 # 检查prompt文件格式
 node -e "
@@ -280,46 +259,6 @@ npx @modelcontextprotocol/inspector npx @becrafter/prompt-mcp
 - 🐛 **错误调试**: 详细的错误信息帮助快速定位问题
 - 📝 **历史记录**: 保存测试历史，便于重复测试
 - ⚡ **性能监控**: 显示工具执行时间，优化性能
-
-### 4. 测试MCP接口
-
-使用MCP客户端工具测试服务器接口：
-
-```bash
-# 安装MCP客户端
-npm install -g @modelcontextprotocol/cli
-
-# 测试服务器
-mcp-client --stdio npx @becrafter/prompt-mcp
-```
-
-### 5. 使用MCP Inspector进行可视化调试
-
-MCP Inspector是一个强大的可视化调试工具，可以直观地测试和调试MCP服务器：
-
-#### 安装MCP Inspector
-
-```bash
-# 全局安装MCP Inspector
-npm install -g @modelcontextprotocol/inspector
-```
-
-#### 启动Inspector
-
-**本地代码调试**:
-```bash
-# 使用本地源代码启动Inspector
-npx @modelcontextprotocol/inspector node src/index.js
-
-# 或使用npm脚本
-npx @modelcontextprotocol/inspector npm start
-```
-
-**已发布包调试**:
-```bash
-# 使用已发布的npm包启动Inspector
-npx @modelcontextprotocol/inspector npx @becrafter/prompt-mcp
-```
 
 #### Inspector功能特性
 
@@ -448,32 +387,65 @@ node --check src/index.js
 - 使用`LOG_LEVEL=debug`查看详细加载日志
 - 验证文件路径和权限
 
+**问题6: 远程服务连接失败**
+- 检查`REMOTE_URL`环境变量是否正确
+- 验证远程服务是否可访问
+- 检查`REMOTE_HEADERS`格式是否正确
+- 使用`LOG_LEVEL=debug`查看详细连接日志
+
 ## 📊 监控和日志
 
 ### 日志级别
-
 - `error`: 错误信息
 - `warn`: 警告信息
 - `info`: 一般信息（默认）
 - `debug`: 调试信息
 
 ### 日志格式
-
 ```
 [时间戳] [级别] 消息内容
 ```
 
 ### 监控指标
-
 - 启动时间
 - 加载的prompt数量
 - 错误率
 - 内存使用情况
 
+## 🤝 贡献指南
+
+### 1. 代码规范
+- 使用 ES6+ 语法
+- 遵循 ESLint 配置
+- 添加适当的注释
+- 保持代码简洁
+
+### 2. 提交规范
+使用约定式提交格式：
+
+```bash
+feat: 添加新功能
+fix: 修复bug
+docs: 更新文档
+style: 代码格式调整
+refactor: 重构代码
+test: 添加测试
+chore: 构建过程或辅助工具的变动
+```
+
+### 3. 测试要求
+- 为新功能添加测试用例
+- 确保所有测试通过
+- 保持测试覆盖率
+
+### 4. 文档更新
+- 更新相关文档
+- 添加使用示例
+- 更新API文档
+
 ## 🚀 部署建议
 
 ### 1. 生产环境配置
-
 ```bash
 # 设置生产环境变量
 export LOG_LEVEL=info
@@ -482,7 +454,6 @@ export MCP_SERVER_NAME=prompt-mcp-prod
 ```
 
 ### 2. 容器化部署
-
 ```dockerfile
 FROM node:18-alpine
 WORKDIR /app
@@ -495,14 +466,12 @@ CMD ["npm", "start"]
 ```
 
 ### 3. 监控和告警
-
 - 设置健康检查端点
 - 配置日志收集
 - 设置性能监控
 - 配置错误告警
 
 ### 4. 生产环境调试
-
 在生产环境中，可以使用MCP Inspector进行远程调试：
 
 ```bash
