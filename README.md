@@ -1,8 +1,24 @@
 # MCP Prompt Server
 
+[![npm version](https://badge.fury.io/js/%40becrafter%2Fprompt-mcp.svg)](https://www.npmjs.com/package/@becrafter/prompt-mcp)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
+
 一个基于 Model Context Protocol (MCP) 的智能 Prompt 管理服务器，支持动态加载和执行预设的 AI 提示词。
 
-## 特性
+## 📖 目录
+
+- [特性](#-特性)
+- [安装](#-安装)
+- [快速开始](#-快速开始)
+- [配置](#-配置)
+- [使用方法](#-使用方法)
+- [API文档](#-api文档)
+- [使用示例](#-使用示例)
+- [相关文档](#-相关文档)
+- [许可证](#-许可证)
+
+## ✨ 特性
 
 - 🚀 **模块化架构**: 代码结构清晰，易于维护和扩展
 - 📝 **智能日志**: 分级日志系统，支持不同级别的日志输出
@@ -14,7 +30,7 @@
 - 🌐 **远程服务**: 支持从远程服务器加载和处理 prompts
 - 🔑 **自定义请求头**: 支持配置远程服务器的请求头信息
 
-## 安装
+## 📦 安装
 
 ```bash
 # 通过 npm 安装
@@ -25,45 +41,76 @@ yarn add @becrafter/prompt-mcp
 
 # 或者通过 pnpm 安装
 pnpm add @becrafter/prompt-mcp
-
-# 启动服务器（使用默认prompts目录）
-npm start
-
-# 开发模式（自动重启）
-npm run dev
-
-# 查看帮助信息
-npm run help
-
-# 查看版本信息
-npm run version
 ```
 
-## 配置
+## 🚀 快速开始
+
+### 1. 启动服务器
+
+```bash
+# 使用默认配置启动（使用内置prompts）
+npx @becrafter/prompt-mcp
+
+# 或者全局安装后使用
+npm install -g @becrafter/prompt-mcp
+prompt-mcp --prompts-dir ./my-prompts
+```
+
+### 2. 准备Prompt文件
+
+如果你要使用自定义prompts，需要先创建prompt文件：
+
+```bash
+# 创建prompts目录
+mkdir my-prompts
+
+# 创建示例prompt文件
+cat > my-prompts/example.yaml << 'EOF'
+name: "示例助手"
+description: "一个简单的示例prompt"
+messages:
+  - role: "user"
+    content:
+      text: "你好，{{name}}！请帮我{{task}}。"
+arguments:
+  - name: "name"
+    description: "用户姓名"
+    type: "string"
+    required: true
+  - name: "task"
+    description: "要执行的任务"
+    type: "string"
+    required: true
+EOF
+```
+
+### 3. 查看帮助信息
+
+```bash
+npx @becrafter/prompt-mcp --help
+```
+
+### 3. 查看版本信息
+
+```bash
+npx @becrafter/prompt-mcp --version
+```
+
+## ⚙️ 配置
 
 ### 命令行参数
 
-服务器支持通过命令行参数指定配置：
-
 ```bash
 # 指定prompts目录
-node src/index.js --prompts-dir /path/to/prompts
-node src/index.js -p ./my-prompts
+npx @becrafter/prompt-mcp --prompts-dir /path/to/prompts
+npx @becrafter/prompt-mcp -p ./my-prompts
 
 # 使用远程服务器
-node src/index.js --remote-url https://api.example.com/prompts
-node src/index.js -r https://api.example.com/prompts
+npx @becrafter/prompt-mcp --remote-url https://api.example.com/prompts
+npx @becrafter/prompt-mcp -r https://api.example.com/prompts
 
 # 设置远程服务器请求头
-node src/index.js -r https://api.example.com/prompts -H '{"Authorization":"Bearer token"}'
-
-# 查看帮助信息
-node src/index.js --help
-node src/index.js -h
-
-# 查看版本信息
-node src/index.js --version
-node src/index.js -v
+npx @becrafter/prompt-mcp -r https://api.example.com/prompts -H '{"Authorization":"Bearer token"}'
 ```
 
 ### 环境变量
@@ -80,7 +127,7 @@ cp env.example .env
 - `REMOTE_URL`: 远程服务器地址（优先级低于命令行参数）
 - `REMOTE_HEADERS`: 远程服务器请求头（JSON格式，优先级低于命令行参数）
 - `MCP_SERVER_NAME`: 服务器名称（默认: prompt-mcp）
-- `MCP_SERVER_VERSION': 服务器版本（默认: 0.1.1）
+- `MCP_SERVER_VERSION`: 服务器版本（默认: 0.1.1）
 - `LOG_LEVEL`: 日志级别（error/warn/info/debug，默认: info）
 - `MAX_PROMPTS`: 最大prompt数量限制（默认: 100）
 
@@ -90,11 +137,11 @@ cp env.example .env
 2. **环境变量**
 3. **默认值** (最低优先级)
 
-## 使用方法
+## 📝 使用方法
 
 ### 1. 创建 Prompt 文件
 
-在 `src/prompts/` 目录下创建 YAML 或 JSON 格式的 prompt 文件：
+在 `prompts/` 目录下创建 YAML 或 JSON 格式的 prompt 文件：
 
 ```yaml
 name: "代码审查助手"
@@ -157,100 +204,49 @@ arguments:
 - `get_prompt_names`: 获取所有可用的 prompt 名称
 - `get_prompt_info`: 获取指定 prompt 的详细信息
 
-## 项目结构
+## 📚 API文档
 
-```
-src/
-├── index.js          # 主入口文件
-├── config.js         # 配置管理
-├── logger.js         # 日志工具
-├── promptManager.js  # Prompt 管理器
-├── promptProcessor.js # Prompt 处理器
-└── prompts/          # Prompt 文件目录
-    ├── code-review.yaml
-    ├── doc-generator.yaml
-    └── error-fixer.yaml
-```
+### MCP工具接口
 
-## 版本发布
+服务器实现了标准的 MCP (Model Context Protocol) 接口：
 
-要发布新版本，只需创建一个新的版本标签并推送到 GitHub：
+#### ListTools
+获取所有可用的工具列表
 
-```bash
-# 创建新的版本标签（例如：v0.1.0）
-git tag v0.1.0
+#### CallTool
+调用指定的工具执行 prompt
 
-# 推送标签到远程仓库
-git push origin v0.1.0
-```
+**参数：**
+- `name`: 工具名称
+- `arguments`: 工具参数（JSON对象）
 
-在使用自动发布功能之前，您需要配置以下内容：
+**返回：**
+- `content`: 执行结果内容数组
+- `isError`: 是否发生错误（可选）
 
-1. 启用 GitHub Actions 权限：
-   - 访问仓库的 Settings -> Actions -> General
-   - 在 "Workflow permissions" 部分
-   - 选择 "Read and write permissions"
-   - 点击 "Save" 保存设置
-
-2. 配置 NPM 令牌：
-   - 访问 npmjs.com -> Access Tokens
-   - 创建新的令牌（类型选择 Publish）
-   - 将令牌添加到仓库的 Secrets（名称：`NPM_TOKEN`）
-   - 访问 npmjs.com -> Access Tokens
-   - 创建新的令牌（类型选择 Publish）
-   - 将令牌添加到仓库的 Secrets
-
-配置完成后，GitHub Actions 将自动：
-1. 更新 package.json 中的版本号
-2. 更新 env.example 中的版本号
-3. 更新 README.md 中的版本信息
-4. 发布新版本到 npm 仓库
-
-## 开发
-
-### 代码结构说明
-
-- **Config**: 配置管理类，处理环境变量和目录管理
-- **Logger**: 日志工具类，支持分级日志输出
-- **PromptManager**: Prompt 管理器，负责加载、验证和管理 prompts
-- **PromptProcessor**: Prompt 处理器，负责参数验证和内容处理
-- **ArgumentValidator**: 参数验证工具，使用 Zod 进行类型验证
-
-### 错误处理
-
-- 所有操作都有完善的错误处理机制
-- 详细的错误日志记录
-- 友好的错误信息返回
-
-### 性能优化
-
-- 并行加载 prompt 文件
-- 使用 Map 数据结构提高查找效率
-- 避免重复的文件读取操作
-
-## 使用示例
+## 🎯 使用示例
 
 ### 启动服务器
 
 ```bash
 # 使用默认prompts目录
-npm start
+npx @becrafter/prompt-mcp
 
 # 指定自定义prompts目录
-node src/index.js --prompts-dir /path/to/my/prompts
+npx @becrafter/prompt-mcp --prompts-dir /path/to/my/prompts
 
 # 使用远程服务器
-node src/index.js -r https://api.example.com/prompts
+npx @becrafter/prompt-mcp -r https://api.example.com/prompts
 
 # 使用远程服务器和自定义请求头
-node src/index.js -r https://api.example.com/prompts -H '{"Authorization":"Bearer token"}'
+npx @becrafter/prompt-mcp -r https://api.example.com/prompts -H '{"Authorization":"Bearer token"}'
 
 # 使用环境变量
-PROMPTS_DIR=/custom/prompts npm start
-REMOTE_URL=https://api.example.com/prompts REMOTE_HEADERS='{"key":"value"}' npm start
+PROMPTS_DIR=/custom/prompts npx @becrafter/prompt-mcp
+REMOTE_URL=https://api.example.com/prompts REMOTE_HEADERS='{"key":"value"}' npx @becrafter/prompt-mcp
 
 # 调试模式
-LOG_LEVEL=debug node src/index.js -p ./debug-prompts
+LOG_LEVEL=debug npx @becrafter/prompt-mcp -p ./prompts
 ```
 
 ### 使用代码审查助手
@@ -283,6 +279,12 @@ const info = await mcpClient.callTool('get_prompt_info', {
 });
 ```
 
-## 许可证
+## 📖 相关文档
+
+- [开发文档](./DEVELOPMENT.md) - 项目结构、开发环境设置、贡献指南
+- [版本发布](./RELEASE.md) - 版本发布流程、GitHub Actions配置
+- [环境配置示例](./env.example) - 环境变量配置示例
+
+## 📄 许可证
 
 MIT License

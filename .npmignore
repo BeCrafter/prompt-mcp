@@ -4,7 +4,6 @@
 env.example
 node_modules
 *.log
-test.js
 .DS_Store
 .vscode
 .idea

@@ -7,6 +7,17 @@
   },
   "type": "module",
   "main": "src/index.js",
+  "bin": {
+    "prompt-mcp": "bin/prompt-mcp"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BeCrafter/prompt-mcp.git"
+  },
+  "homepage": "https://github.com/BeCrafter/prompt-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/BeCrafter/prompt-mcp/issues"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",

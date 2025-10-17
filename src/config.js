@@ -93,7 +93,7 @@ export class Config {
     // 确定prompts目录
     this.promptsDir = cliArgs.promptsDir || 
                      process.env.PROMPTS_DIR || 
-                     path.join(__dirname, 'prompts');
+                     path.join(__dirname, '..', 'prompts');
     
     // 远程服务器配置
     this.remoteUrl = cliArgs.remoteUrl || process.env.REMOTE_URL || null;
