@@ -273,7 +273,7 @@ messages:                      # 可选
 arguments:                     # 可选
   - name: "参数名"
     description: "参数描述"
-    type: "string"            # string, number, boolean
+    type: "string"             # string, number, boolean
     required: true
 ```
 
