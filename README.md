@@ -268,7 +268,7 @@ cp env.example .env
 - `REMOTE_URL`: 远程服务器地址
 - `REMOTE_HEADERS`: 远程服务器请求头（JSON格式）
 - `MCP_SERVER_NAME`: 服务器名称（默认: prompt-mcp）
-- `MCP_SERVER_VERSION': 服务器版本（默认: 0.1.4）
+- `MCP_SERVER_VERSION': 服务器版本（默认: 0.1.5）
 - `LOG_LEVEL`: 日志级别（error/warn/info/debug，默认: info）
 - `MAX_PROMPTS`: 最大prompt数量限制（默认: 100）
 - `RECURSIVE_SCAN`: 是否启用递归扫描子目录（true/false，默认: true）
