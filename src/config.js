@@ -25,7 +25,7 @@ function parseCommandLineArgs() {
       try {
         options.headers = JSON.parse(args[i + 1]);
       } catch (error) {
-        console.error('Headers必须是有效的JSON格式');
+        process.stderr.write('Headers必须是有效的JSON格式\n');
         process.exit(1);
       }
       i++; // 跳过下一个参数
@@ -47,7 +47,7 @@ function parseCommandLineArgs() {
  * 显示帮助信息
  */
 function showHelp() {
-  console.log(`
+  process.stderr.write(`
 MCP Prompt Server - 智能 Prompt 管理服务器
 
 用法:
@@ -109,7 +109,7 @@ export class Config {
     this.recursiveScan = process.env.RECURSIVE_SCAN !== 'false'; // 默认启用递归扫描
     
     if (cliArgs.version) {
-      console.log(this.serverVersion);
+      process.stderr.write(this.serverVersion + '\n');
       process.exit(0);
     }
 
@@ -125,7 +125,7 @@ export class Config {
       await fs.ensureDir(this.promptsDir);
       return true;
     } catch (error) {
-      console.error('Failed to create prompts directory:', error);
+      process.stderr.write('Failed to create prompts directory: ' + error.message + '\n');
       return false;
     }
   }
@@ -158,25 +158,25 @@ export class Config {
   }
 
   /**
-   * 显示当前配置
+   * 显示当前配置（输出到 stderr，不干扰 MCP 通信）
    */
   showConfig() {
-    console.log('当前配置:');
-    console.log(`  Prompts目录: ${this.promptsDir}`);
+    process.stderr.write('当前配置:\n');
+    process.stderr.write(`  Prompts目录: ${this.promptsDir}\n`);
     if (this.remoteUrl) {
-      console.log(`  远程服务器: ${this.remoteUrl}`);
+      process.stderr.write(`  远程服务器: ${this.remoteUrl}\n`);
       if (this.remoteHeaders) {
-        console.log('  远程请求头:');
+        process.stderr.write('  远程请求头:\n');
         Object.entries(this.remoteHeaders).forEach(([key, value]) => {
-          console.log(`    ${key}: ${value}`);
+          process.stderr.write(`    ${key}: ${value}\n`);
         });
       }
     }
-    console.log(`  服务器名称: ${this.serverName}`);
-    console.log(`  服务器版本: ${this.serverVersion}`);
-    console.log(`  日志级别: ${this.logLevel}`);
-    console.log(`  最大Prompts: ${this.maxPrompts}`);
-    console.log(`  递归扫描: ${this.recursiveScan ? '启用' : '禁用'}`);
+    process.stderr.write(`  服务器名称: ${this.serverName}\n`);
+    process.stderr.write(`  服务器版本: ${this.serverVersion}\n`);
+    process.stderr.write(`  日志级别: ${this.logLevel}\n`);
+    process.stderr.write(`  最大Prompts: ${this.maxPrompts}\n`);
+    process.stderr.write(`  递归扫描: ${this.recursiveScan ? '启用' : '禁用'}\n`);
   }
 }
 

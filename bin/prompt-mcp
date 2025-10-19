@@ -30,6 +30,6 @@ child.on('exit', (code) => {
 });
 
 child.on('error', (error) => {
-  console.error('启动失败:', error.message);
+  process.stderr.write('启动失败: ' + error.message + '\n');
   process.exit(1);
 });

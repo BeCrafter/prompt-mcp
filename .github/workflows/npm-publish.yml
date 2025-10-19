@@ -44,6 +44,9 @@ jobs:
           
           # 更新 README.md 中的版本信息
           sed -i "s/MCP_SERVER_VERSION.*默认: .*/MCP_SERVER_VERSION': 服务器版本（默认: ${{ steps.get_version.outputs.VERSION }}）/" README.md
+          
+          # 更新 config.js 中的默认版本
+          sed -i "s/this.serverVersion = process.env.MCP_SERVER_VERSION || '[^']*'/this.serverVersion = process.env.MCP_SERVER_VERSION || '${{ steps.get_version.outputs.VERSION }}'/g" src/config.js
       
       - name: Commit version updates
         run: |
