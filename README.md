@@ -8,7 +8,7 @@
 
 ## ✨ 核心特性
 
-- 🛠️ **三个核心工具**: `get_prompt_list`、`get_prompt`、`reload_prompts`
+- 🛠️ **四个核心工具**: `get_prompt_list`、`get_prompt`、`search_prompts`、`reload_prompts`
 - 🔑 **固定长度唯一ID**: 基于文件路径哈希生成8位唯一ID，彻底解决同名文件冲突
 - 📁 **递归目录扫描**: 自动发现子目录中的prompt文件
 - 🌐 **远程服务支持**: 支持从远程服务器加载prompts，只需提供`uniqueId`字段
@@ -115,6 +115,56 @@ arguments:
   }
 }
 ```
+
+### search_prompts
+搜索符合要求的prompts，支持模糊匹配。
+
+**参数**:
+- `title` (string, 必需): 搜索关键词
+
+**返回**:
+```json
+{
+  "success": true,
+  "query": "html",
+  "count": 5,
+  "results": [
+    {
+      "id": "a15518de",
+      "name": "gen_html_web_page",
+      "title": "gen_html_web_page",
+      "description": "帮助用户将任意中文内容可视化为美观、现代、易读的网页...",
+      "arguments": [],
+      "hasArguments": false,
+      "filePath": "generator/gen_html_web_page.yaml",
+      "metadata": {
+        "fileName": "gen_html_web_page.yaml",
+        "fullPath": "/path/to/prompts/generator/gen_html_web_page.yaml"
+      }
+    }
+  ],
+  "debug": {
+    "scores": [
+      {
+        "id": "a15518de",
+        "name": "gen_html_web_page",
+        "score": 55
+      }
+    ]
+  }
+}
+```
+
+**搜索算法特性**:
+- 🎯 **内容匹配**: 专注于 `name` 和 `description` 字段的内容搜索，不包含ID检索
+- 📊 **相关性排序**: 按匹配得分降序排列结果
+- 🔍 **多种匹配模式**: 
+  - 完全匹配（得分最高）
+  - 包含匹配（得分较高）  
+  - 部分词匹配（得分适中）
+- ⚖️ **加权算法**: name(60%) > description(40%)
+- 🌐 **模式兼容**: 完全兼容本地和远程服务两种模式
+- 🔑 **功能分离**: ID 精确查找请使用 `get_prompt` 工具
 
 ### reload_prompts
 重新加载所有预设的prompts。
@@ -302,6 +352,11 @@ const result = await mcpClient.callTool('get_prompt_list', {});
 // 根据ID获取特定prompt
 const prompt = await mcpClient.callTool('get_prompt', {
   prompt_id: 'a1b2c3d4'
+});
+
+// 搜索相关prompts
+const searchResult = await mcpClient.callTool('search_prompts', {
+  title: 'html'
 });
 
 // 重新加载prompts

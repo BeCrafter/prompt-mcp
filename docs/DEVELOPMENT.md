@@ -351,6 +351,13 @@ npx @modelcontextprotocol/inspector npx @becrafter/prompt-mcp
    - 修改代码后自动重启服务器
    - Inspector会自动重新连接到新的服务器实例
 
+6. **搜索功能调试**:
+   - 使用Inspector测试不同的搜索关键词
+   - 查看debug.scores中的得分计算结果
+   - 验证搜索算法在本地和远程模式下的表现
+   - 测试边界情况（空字符串、特殊字符、超长文本）
+   - 性能测试：使用多个关键词同时搜索，验证准确性和相关性
+
 #### 常见问题排查
 
 **问题1: Inspector无法连接本地服务器**
@@ -392,6 +399,19 @@ node --check src/index.js
 - 验证远程服务是否可访问
 - 检查`REMOTE_HEADERS`格式是否正确
 - 使用`LOG_LEVEL=debug`查看详细连接日志
+
+**问题7: 搜索功能返回结果不符合预期**
+- 检查搜索关键词的拼写和格式
+- 使用`get_prompt_list`查看可搜索的prompt内容
+- 验证prompt的name、description字段是否包含搜索关键词
+- 查看debug.scores中的得分计算结果
+- 尝试使用部分匹配或不同的关键词
+
+**问题8: 搜索结果为空但预期有结果**
+- 验证prompt数据是否正确加载（使用`get_prompt_list`）
+- 检查搜索关键词是否包含特殊字符
+- 尝试使用更宽泛的搜索词（如单个字母或数字）
+- 检查相似度算法的权重配置
 
 ## 📊 监控和日志
 
