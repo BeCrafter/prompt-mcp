@@ -45,14 +45,14 @@ jobs:
           # 更新 README.md 中的版本信息
           sed -i "s/MCP_SERVER_VERSION.*默认: .*/MCP_SERVER_VERSION': 服务器版本（默认: ${{ steps.get_version.outputs.VERSION }}）/" README.md
           
-          # 更新 config.js 中的默认版本
-          sed -i "s/this.serverVersion = process.env.MCP_SERVER_VERSION || '[^']*'/this.serverVersion = process.env.MCP_SERVER_VERSION || '${{ steps.get_version.outputs.VERSION }}'/g" src/config.js
+          # 更新 config.js 中的默认版本（使用双引号避免单引号嵌套问题）
+          sed -i "s/this\.serverVersion = process\.env\.MCP_SERVER_VERSION || '[^']*';/this.serverVersion = process.env.MCP_SERVER_VERSION || '${{ steps.get_version.outputs.VERSION }}';/g" src/config.js
       
       - name: Commit version updates
         run: |
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          git add package.json package-lock.json env.example README.md
+          git add package.json package-lock.json env.example README.md src/config.js
           git commit -m "chore: update version to ${{ steps.get_version.outputs.VERSION }}" || echo "No changes to commit"
           git push origin HEAD:main
       
