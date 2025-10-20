@@ -24,7 +24,11 @@ let server;
 const MCP_TOOLS = [
   {
     name: "get_prompt_list",
-    description: "获取所有可用的prompt列表，包括标题和描述。用于在获取特定prompt之前发现可用的prompts。",
+    description: "\
+      - 功能：返回所有提示词的标题和简短描述（轻量级，无完整内容）。\n\
+      - 调用时机：用户未明确需求时，需初步筛选提示词。 \n\
+      - 避免滥用：勿用于替代`get_prompt`获取完整内容。\n\
+    ",
     inputSchema: {
       type: "object",
       properties: {},
@@ -33,7 +37,11 @@ const MCP_TOOLS = [
   },
   {
     name: "get_prompt", 
-    description: "根据ID获取特定prompt的完整内容，包括所有消息、参数和元数据。",
+    description: "\
+      - 功能：根据ID返回提示词的完整内容（消息、参数、元数据）。\n\
+      - 调用时机：用户已通过`get_prompt_list`或`search_prompts`锁定ID后。\n\
+      - 避免滥用：禁止无ID调用，确保前置筛选已完成。\n\
+    ",
     inputSchema: {
       type: "object",
       properties: {
@@ -47,7 +55,11 @@ const MCP_TOOLS = [
   },
   {
     name: "search_prompts",
-    description: "搜索符合要求的prompts",
+    description: "\
+      - 功能：通过关键词搜索匹配的提示词（返回标题、描述、ID）。\n\
+      - 调用时机：用户知道部分需求（如“营销文案”）但不确定ID时。 \n\
+      - 避免滥用：仅作为`get_prompt`的前置步骤，勿重复调用。 \n\
+    ",
     inputSchema: {
       type: "object",
       properties: {
@@ -61,7 +73,11 @@ const MCP_TOOLS = [
   },
   {
     name: "reload_prompts",
-    description: "重新加载所有预设的prompts",
+    description: "\
+      - 功能：强制重新加载所有预设提示词（覆盖缓存）。\n\
+      - 调用时机：管理员更新提示词后需同步时。\n\
+      - 避免滥用：禁止用户级调用，仅限管理接口。\n\
+    ",
     inputSchema: {
       type: "object", 
       properties: {},
