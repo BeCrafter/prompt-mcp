@@ -87,6 +87,29 @@ export class PromptManager {
   }
 
   /**
+   * 读取组元数据的函数 
+   * @param {string} dir - 目录路径
+   * @returns {Object} 组元数据
+   */
+  readGroupMeta(dir) {
+    const GROUP_META_FILENAME = '.groupmeta.json';
+    try {
+      const metaPath = path.join(dir, GROUP_META_FILENAME);
+      if (!fs.existsSync(metaPath)) {
+        return { enabled: true };
+      }
+      const raw = fs.readFileSync(metaPath, 'utf8');
+      const data = JSON.parse(raw);
+      return {
+        enabled: data.enabled !== false
+      };
+    } catch (error) {
+      console.warn('读取类目元数据失败:', error);
+      return { enabled: true };
+    }
+  }
+
+  /**
    * 注册ID到路径的映射
    * @param {string} id - 唯一ID
    * @param {string} relativePath - 相对路径
@@ -184,17 +207,30 @@ export class PromptManager {
 
   /**
    * 递归扫描目录，获取所有prompt文件
+   * 
+   * @param {string} currentPath  - 当前目录路径
+   * @param {string} relativePath - 相对于当前目录的路径
+   * @returns {Array} 所有prompt文件
    */
-  async scanPromptFiles(dirPath, relativePath = '') {
+  async scanPromptFiles(currentPath, relativePath = '') {
     const promptFiles = [];
+
+    if (relativePath) {
+      // console.log('读取组元数据:', "{relativePath:", relativePath, ", currentPath:", currentPath, "}");
+      const meta = this.readGroupMeta(path.join(currentPath, relativePath));
+      if (meta.enabled === false) {
+        return [];
+      }
+    }
     
     try {
-      const items = await fs.readdir(dirPath, { withFileTypes: true });
+      const items = await fs.readdir(currentPath, { withFileTypes: true });
+      // console.log('扫描目录:', "{currentPath:", currentPath, ", items:", items, "}");
       
       for (const item of items) {
-        const itemPath = path.join(dirPath, item.name);
-        const itemRelativePath = relativePath ? path.join(relativePath, item.name) : item.name;
-        
+        const itemPath = path.join(currentPath, item.name);                                     // 文件的绝对路径，相对于当前目录，如：/home/work/prompt-manager/prompts/xxx/xxx.yaml
+        const itemRelativePath = relativePath ? path.join(relativePath, item.name) : item.name; // 文件的相对路径，相对于当前目录，如：xxx/xxx.yaml
+
         if (item.isDirectory()) {
           // 递归扫描子目录
           const subFiles = await this.scanPromptFiles(itemPath, itemRelativePath);
@@ -212,7 +248,7 @@ export class PromptManager {
         }
       }
     } catch (error) {
-      logger.warn(`扫描目录 ${dirPath} 时发生错误:`, error.message);
+      logger.warn(`扫描目录 ${currentPath} 时发生错误:`, error.message);
     }
     
     return promptFiles;
@@ -311,6 +347,12 @@ export class PromptManager {
       } else {
         promptData = YAML.parse(content);
       }
+
+      if (promptData.enabled !== true) {
+        logger.debug(`skipped loading prompt: ${promptData.name} -> disabled`);
+        return null;
+      }
+      logger.debug(`loaded prompt: ${promptData.name} -> ${filePath}`);
 
       // 验证prompt数据结构
       const validatedPrompt = PromptSchema.parse(promptData);

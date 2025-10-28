@@ -11,8 +11,8 @@ import {
 // 导入自定义模块
 import { config } from './config.js';
 import { logger } from './logger.js';
-import { PromptManager } from './promptManager.js';
-import { PromptProcessor, ArgumentValidator } from './promptProcessor.js';
+import { PromptManager } from './manager.js';
+import { PromptProcessor, ArgumentValidator } from './processor.js';
 
 // 全局变量
 let promptManager;
