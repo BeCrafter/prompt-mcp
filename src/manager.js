@@ -298,13 +298,24 @@ export class PromptManager {
       const loadPromises = promptFiles.map(fileInfo => this.loadPromptFile(fileInfo));
       const results = await Promise.allSettled(loadPromises);
 
+      // console.log("results:", results,results.length);
+      // console.log("promptFiles:", promptFiles,promptFiles.length);
+
       // 统计加载结果
-      let successCount = 0;
-      let errorCount = 0;
+      let successCount  = 0;
+      let errorCount    = 0;
+
+      let loadedCount   = 0;
+      let disabledCount = 0;
 
       results.forEach((result, index) => {
         if (result.status === 'fulfilled') {
           successCount++;
+          if (result.value !== null) {
+            loadedCount++;
+          }else{
+            disabledCount++;
+          }
         } else {
           errorCount++;
           const fileInfo = promptFiles[index];
@@ -314,10 +325,10 @@ export class PromptManager {
         }
       });
 
-      logger.info(`本地Prompt加载完成: 成功 ${successCount} 个, 失败 ${errorCount} 个`);
+      logger.info(`本地Prompt加载完成: 启用 ${loadedCount} 个, 禁用 ${disabledCount} 个, 失败 ${errorCount} 个`);
       
       return {
-        success: successCount,
+        success: loadedCount,
         errorCount: errorCount,
         prompts: Array.from(this.loadedPrompts.values()),
         loadErrors: Object.fromEntries(this.loadErrors)

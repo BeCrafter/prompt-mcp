@@ -1,18 +1,11 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { z } from 'zod';
-import { 
-  ListToolsRequestSchema, 
-  CallToolRequestSchema,
-  ListToolsResultSchema,
-  CallToolResultSchema 
-} from '@modelcontextprotocol/sdk/types.js';
+import { ListToolsRequestSchema, CallToolRequestSchema} from '@modelcontextprotocol/sdk/types.js';
 
 // 导入自定义模块
 import { config } from './config.js';
 import { logger } from './logger.js';
 import { PromptManager } from './manager.js';
-import { PromptProcessor, ArgumentValidator } from './processor.js';
 
 // 全局变量
 let promptManager;

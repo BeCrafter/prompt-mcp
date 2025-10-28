@@ -20,7 +20,7 @@
   },
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js",
+    "dev": "node --watch src/index.js -p ~/.prompt-manager/prompts",
     "test": "node test.js",
     "test:server": "echo \"Error: no test specified\" && exit 1",
     "help": "node src/index.js --help",
